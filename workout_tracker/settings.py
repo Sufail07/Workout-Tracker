@@ -34,6 +34,7 @@ INSTALLED_APPS = [
     'core',
     'rest_framework',
     'rest_framework_simplejwt',
+    'drf_spectacular',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -58,6 +59,7 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }
 
 TEMPLATES = [
@@ -129,3 +131,30 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+# drf-spectacular settings
+
+SPECTACULAR_SETTINGS = {
+    "TITLE": "Workout Tracker API",
+    "DESCRIPTION": "API to track user workouts and exercises",
+    "VERSION": "1.0.0",
+    "SERVE_INCLUDE_SCHEMA": False,
+    "COMPONENT_SPLIT_REQUEST": True,
+    "SCHEMA_PATH_PREFIX": "/api",
+
+    "SECURITY": [{"BearerAuth": []}],
+    "COMPONENTS": {
+        "securitySchemes": {
+            "BearerAuth": {
+                "type": "http",
+                "scheme": "bearer",
+                "bearerFormat": "JWT"
+            }
+        }
+    },
+    "AUTHENTICATION_WHITELIST": [],
+    "PREPROCESSING_HOOKS": [
+        'drf_spectacular.hooks.preprocess_exclude_path_format',
+    ],
+}
