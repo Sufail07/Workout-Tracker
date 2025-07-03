@@ -10,11 +10,12 @@ from rest_framework.permissions import IsAuthenticated
 
 # Create your views here.
 
+# registration view
 class RegisterView(generics.CreateAPIView):
     queryset = User.objects.all()
     serializer_class = RegisterSerializer
 
-
+# basic crud of workoutplans
 class WorkoutPlanViewSet(viewsets.ModelViewSet):
     serializer_class = WorkoutPlanSerializer
     permission_classes = [IsAuthenticated]
@@ -25,6 +26,7 @@ class WorkoutPlanViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
         
+    # endpoint to mark a workout as completed
     @action(detail=True, methods=['post'])
     def mark_completed(self, request, pk=None):
         workout = self.get_object()
@@ -39,6 +41,7 @@ class WorkoutPlanViewSet(viewsets.ModelViewSet):
         workout.save()
         return Response({'status': 'Workout marked as completed'})
 
+    # endpoint to get completed workouts
     @action(detail=False, methods=['get'])
     def get_completed(self, request, pk=None):
         completed_workouts = WorkoutPlan.objects.filter(user=request.user, completed=True)
