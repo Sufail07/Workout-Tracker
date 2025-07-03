@@ -12,7 +12,8 @@ A RESTful API for managing user workout plans, exercises, and progress tracking 
 - ✅ Assign multiple exercises to a workout with sets, reps, and weights  
 - ✅ Mark workouts as completed  
 - ✅ View completed workouts  
-- ✅ Permissions: users can only access their own data  
+- ✅ Permissions: users can only access their own data
+- ✅ API documentation: contains proper API documentation using drf-spectacular  
 
 ---
 
