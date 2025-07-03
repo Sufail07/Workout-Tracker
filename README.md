@@ -133,7 +133,7 @@ Example `POST /api/workouts/` request body:
 
 ## ✨ To Do
 
-* [ ] Add Swagger/OpenAPI docs
+* [x] Add Swagger/OpenAPI docs
 * [ ] Add progress reports (e.g., weekly summary)
 * [ ] Add support for recurring workouts
 * [ ] Frontend integration (React or mobile app)
