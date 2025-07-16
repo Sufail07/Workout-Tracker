@@ -141,6 +141,8 @@ Example `POST /api/workouts/` request body:
 
 ---
 
+Project URL: https://roadmap.sh/projects/fitness-workout-tracker
+
 ## 👨‍💻 Author
 
 Built with ❤️ by Sufail :))
