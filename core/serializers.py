@@ -30,13 +30,26 @@ class ExerciseSerializer(serializers.ModelSerializer):
         
         
 class WorkoutExerciseSerializer(serializers.ModelSerializer):
-    exercise_name = serializers.CharField(source='exercise_name', read_only=True)
+    exercise_name = serializers.CharField(source='exercise.name', read_only=True)
 
     class Meta:
         model = WorkoutExercise
         fields = ['id', 'exercise', 'exercise_name', 'sets', 'reps', 'weights']
 
 class WorkoutPlanSerializer(serializers.ModelSerializer):
+    workout_exercises = WorkoutExerciseSerializer(many=True, required=False)
+
     class Meta:
         model = WorkoutPlan
         fields = '__all__'
+        read_only_fields = ['user']
+
+    def create(self, validated_data):
+        exercises_data = validated_data.pop('workout_exercises', [])
+        if not isinstance(exercises_data, list):
+            raise TypeError(f"Expected list of exercises, got {type(exercises_data)}")
+        
+        workout_plan = WorkoutPlan.objects.create(**validated_data)
+        for exercise in exercises_data:
+            WorkoutExercise.objects.create(workout_plan=workout_plan, **exercise)
+        return workout_plan
