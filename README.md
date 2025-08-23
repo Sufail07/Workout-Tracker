@@ -126,11 +126,6 @@ A robust RESTful API for tracking workouts, exercises, and user progress. Built 
 
 ---
 
-## 🧪 Running Tests
-
-```sh
-python manage.py test
-```
 
 ---
 
