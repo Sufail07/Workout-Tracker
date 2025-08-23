@@ -169,11 +169,9 @@ Returns the created workout plan with associated exercises.
 
 - Add more statistics endpoints
 - Add social features (friend leaderboards)
-- More granular permissions
-- Improved test coverage
 
 ---
 
 ## 👨‍💻 Author
 
-Built with ❤️ by [Sufail07](https://github.com/Sufail07)
+Built with ❤️ by [Sufail07](https://github.com/Sufail07) :))
