@@ -1,0 +1,71 @@
+# Python bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv/
+.env/
+
+# Django stuff:
+*.log
+*.pot
+*.pyc
+*.sqlite3
+db.sqlite3
+media/
+staticfiles/
+.DS_Store
+*.mo
+
+# Django migrations (optional: you might want to keep them)
+**/migrations/*.py[cod]
+**/migrations/__pycache__/
+!**/migrations/__init__.py
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# VSCode / IDE settings
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# MacOS
+.DS_Store
+
+# PyCharm
+*.iml
+.idea/
+
+# Test / coverage
+.coverage
+htmlcov/
+.tox/
+.pytest_cache/
+nosetests.xml
+coverage.xml
+*.cover
+*.log
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+
+# Redis / caching (optional)
+redis_data/
+
+# Logs
+logs/
+*.log
