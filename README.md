@@ -1,148 +1,177 @@
 # 🏋️ Workout Tracker API
 
-A RESTful API for managing user workout plans, exercises, and progress tracking — built using **Django** and **Django REST Framework**, with **JWT authentication** for secure access.
+A robust RESTful API for tracking workouts, exercises, and user progress. Built using Django, Django REST Framework, JWT authentication, Redis caching, and rate limiting for reliability and scalability.
 
 ---
 
 ## 🚀 Features
 
-- ✅ User registration and login with JWT authentication  
-- ✅ Exercise management with categories and muscle groups  
-- ✅ Workout plan creation with scheduled date/time  
-- ✅ Assign multiple exercises to a workout with sets, reps, and weights  
-- ✅ Mark workouts as completed  
-- ✅ View completed workouts  
-- ✅ Permissions: users can only access their own data
-- ✅ API documentation: contains proper API documentation using drf-spectacular  
+- **User Registration & JWT Authentication**
+- **Exercise Management:** Create, list, retrieve exercises
+- **Workout Plans:** Create workout plans with nested exercises
+- **Mark Workouts Completed**
+- **View Completed Workouts**
+- **Per-user Data Isolation**
+- **API Documentation with drf-spectacular**
+- **Redis Caching:** Caches GET requests to reduce DB load
+- **Rate Limiting:** Uses DRF’s UserRateThrottle
 
 ---
 
 ## 📦 Tech Stack
 
-- **Backend**: Django, Django REST Framework  
-- **Authentication**: JWT (via `djangorestframework-simplejwt`)  
-- **Database**: SQLite (default, can switch to PostgreSQL)  
-- **Testing**: Django `TestCase` and DRF `APITestCase`  
+- Django & Django REST Framework
+- JWT (`djangorestframework-simplejwt`)
+- Redis (caching)
+- DRF UserRateThrottle (rate limiting)
+- SQLite (default) / PostgreSQL (recommended for production)
+- drf-spectacular (API docs)
 
 ---
 
 ## 🛠️ Setup Instructions
 
-1. **Clone the Repository**  
-   ```bash
-   git clone https://github.com/your-username/Workout-Tracker.git
+1. **Clone the repo:**
+   ```sh
+   git clone https://github.com/Sufail07/Workout-Tracker.git
    cd Workout-Tracker
    ```
 
-2. **Create a Virtual Environment**
-   ```bash
+2. **Create and activate a virtual environment:**
+   ```sh
    python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   source venv/bin/activate
    ```
 
-3. **Install Dependencies**
-   ```bash
+3. **Install requirements:**
+   ```sh
    pip install -r requirements.txt
    ```
 
-4. **Run Migrations**
-   ```bash
-   python manage.py makemigrations
+4. **Install and run Redis locally.**  
+   *(See [Redis Quickstart](https://redis.io/docs/getting-started/installation/))*
+
+5. **Migrate database:**
+   ```sh
    python manage.py migrate
    ```
 
-5. **Seed Initial Exercises**
-   *(Optional — only if you've written a custom management command)*
-   ```bash
-   python manage.py seed_exercises
+6. **Create a superuser (optional, for admin access):**
+   ```sh
+   python manage.py createsuperuser
    ```
 
-6. **Start the Development Server**
-   ```bash
+7. **Run the server:**
+   ```sh
    python manage.py runserver
    ```
 
 ---
 
-## 🔐 API Authentication
+## 🔐 Authentication Workflow
 
-Uses **JWT tokens**:
-
-* Get tokens: `POST /api/login/`
-* Refresh token: `POST /api/token/refresh/`
-* Register: `POST /api/register/`
-
-Use the access token in headers:
-
-```http
-Authorization: Bearer <your-access-token>
-```
+- **Register:** `POST /api/register/`
+- **Login (get tokens):** `POST /api/token/`
+- **Refresh token:** `POST /api/token/refresh/`
+- Use JWT access token in header:
+  ```
+  Authorization: Bearer <access_token>
+  ```
 
 ---
 
-## 📡 API Endpoints
+## 🌐 API Endpoints & Workflow
 
-| Method | Endpoint                             | Description               |
-| ------ | ------------------------------------ | ------------------------- |
-| POST   | `/api/register/`                     | Register new user         |
-| POST   | `/api/login/`                        | Login and get JWT token   |
-| GET    | `/api/exercises/`                    | List all exercises        |
-| POST   | `/api/workouts/`                     | Create new workout plan   |
-| GET    | `/api/workouts/`                     | List user's workouts      |
-| GET    | `/api/workouts/{id}/`                | View specific workout     |
-| PUT    | `/api/workouts/{id}/`                | Update workout            |
-| DELETE | `/api/workouts/{id}/`                | Delete workout            |
-| POST   | `/api/workouts/{id}/mark_completed/` | Mark workout as completed |
-| GET    | `/api/workouts/get_completed/`       | List completed workouts   |
+### 1️⃣ User Authentication
+
+- `POST /api/register/` — Register a new user
+- `POST /api/token/` — Obtain JWT access and refresh tokens
+- `POST /api/token/refresh/` — Refresh the access token
+
+### 2️⃣ Exercises
+
+- `GET /api/exercises/` — List all exercises (cached for 10 mins)
+- `POST /api/exercises/` — Create a new exercise (invalidates cache)
+- `GET /api/exercises/{id}/` — Retrieve exercise details
+
+> **Caching:** All GET requests are cached using Redis to minimize repeated DB hits.
+
+### 3️⃣ Workout Plans
+
+- `POST /api/workoutplans/` — Create a workout plan with nested exercises  
+   - Handles creation of WorkoutPlan and associated WorkoutExercise objects  
+   - Invalidates cache for workout plans & completed workouts
+- `GET /api/workoutplans/` — List all workout plans for the user  
+   - Returns cached data if available (per-user, 5 mins), else queries DB, serializes, and caches
+
+### 4️⃣ Mark Workout as Completed
+
+- `POST /api/workoutplans/{id}/mark_completed/` — Marks the workout as completed  
+   - Updates `completed` field  
+   - Invalidates cache for completed workouts and all workouts
+
+### 5️⃣ Completed Workouts
+
+- `GET /api/completed_workouts/` — List all completed workouts for the user (cached, 5 mins)
 
 ---
 
-## 🧪 Running Tests
+## ⚡ Caching & Rate Limiting Logic
 
-```bash
-python manage.py test
-```
+- **Exercises:** Cached for 10 mins (`exercise_data`)
+- **Workout Plans per User:** Cached for 5 mins (`workout_data_{user_id}`)
+- **Completed Workouts per User:** Cached for 5 mins (`completed_workouts_{user_id}`)
+- **Cache Invalidation:** On create, update, delete, or marking completed
+- **Rate Limiting:** All endpoints use DRF’s UserRateThrottle to prevent abuse
 
 ---
 
-## 🔍 Sample WorkoutPlan JSON
 
-Example `POST /api/workouts/` request body:
+---
 
+## 📝 Example: Creating a Workout Plan
+
+**Request:**  
+`POST /api/workoutplans/`
 ```json
 {
-  "name": "Push-Pull Day",
-  "scheduled_time": "2025-07-05T07:00:00Z",
-  "exercises": [
+  "name": "Push Day",
+  "scheduled_date": "2025-08-24",
+  "workout_exercises": [
     {
       "exercise": 1,
       "sets": 4,
       "reps": 10,
-      "weights": 40
+      "weight": 60
     },
     {
       "exercise": 2,
       "sets": 3,
-      "reps": 12,
-      "weights": 15
+      "reps": 8,
+      "weight": 25
     }
   ]
 }
 ```
 
+**Response:**  
+Returns the created workout plan with associated exercises.
+
+---
+
+## 📖 API Documentation
+
+- Auto-generated docs at `/api/schema/` (OpenAPI/Swagger via drf-spectacular)
+
 ---
 
 ## ✨ To Do
 
-* [x] Add Swagger/OpenAPI docs
-* [ ] Add progress reports (e.g., weekly summary)
-* [ ] Add support for recurring workouts
-* [ ] Frontend integration (React or mobile app)
+- Add more statistics endpoints
+- Add social features (friend leaderboards)
 
 ---
 
-Project URL: https://roadmap.sh/projects/fitness-workout-tracker
-
 ## 👨‍💻 Author
 
-Built with ❤️ by Sufail :))
+Built with ❤️ by [Sufail07](https://github.com/Sufail07) :))
