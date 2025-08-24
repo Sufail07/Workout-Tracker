@@ -1,4 +1,4 @@
-asgiref==3.8.
+asgiref==3.8.1
 async-timeout==5.0.1
 attrs==25.3.0
 Django==5.2.3

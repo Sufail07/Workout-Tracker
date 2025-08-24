@@ -1,7 +1,6 @@
-from django.shortcuts import render
-from rest_framework.decorators import  api_view, permission_classes, action
-from .models import Exercise, WorkoutExercise, WorkoutPlan
-from .serializers import RegisterSerializer, ExerciseSerializer, WorkoutExerciseSerializer, WorkoutPlanSerializer
+from rest_framework.decorators import action
+from .models import Exercise, WorkoutPlan
+from .serializers import RegisterSerializer, ExerciseSerializer, WorkoutPlanSerializer
 from rest_framework import generics, viewsets
 from django.contrib.auth.models import User
 from rest_framework.response import Response
@@ -12,6 +11,7 @@ from rest_framework.viewsets import GenericViewSet
 from rest_framework.permissions import IsAuthenticated
 from django.core.cache import cache
 from rest_framework.throttling import UserRateThrottle
+from rest_framework_simplejwt.views import TokenObtainPairView
 
 # Create your views here.
 
@@ -19,45 +19,49 @@ from rest_framework.throttling import UserRateThrottle
 class GetWorkoutsThrottle(UserRateThrottle):
     rate =  '5/min'
 
+class ThrottledTokenObtainPairView(TokenObtainPairView):
+    throttle_scope = 'login'
+
 
 # registration view
-class RegisterView(generics.CreateAPIView):
+class RegisterView(CreateAPIView):
     queryset = User.objects.all()
     serializer_class = RegisterSerializer
 
 # basic crud of workoutplans
+'''
+Implemented rate limiting GET request to the workoutplan endpoint to 5 requests per minute by a user.
+Handled caching with timeout set to 5 minutes
+'''
 class WorkoutPlanViewSet(viewsets.ModelViewSet):
     serializer_class = WorkoutPlanSerializer
     permission_classes = [IsAuthenticated]
     throttle_classes = []
     
     def get_queryset(self):
-        cache_key = f'workout_data_{self.request.user.id}'
-        workouts = cache.get(cache_key)
-
-        if workouts is None:
-            queryset = WorkoutPlan.objects.filter(user=self.request.user)
-            serializer = WorkoutPlanSerializer(queryset, many=True)
-            workouts = serializer.data
-            cache.set(cache_key, workouts, timeout=60*5)
-        else:
-            ids = [w['id'] for w in workouts]
-            return WorkoutPlan.objects.filter(id__in=ids)
-                    
-        return queryset
+        return WorkoutPlan.objects.filter(user=self.request.user)
     
-    # Rate limiting GET requests to the endpoint
+    
+    def get_throttles(self):
+        if self.action == 'list':
+            return [GetWorkoutsThrottle()]
+        return super().get_throttles()
+    
     def list(self, request, *args, **kwargs):
-        self.throttle_classes = [GetWorkoutsThrottle]
+        cache_key = f'workout_data_{self.request.user.id}'
+        cached_data = cache.get(cache_key)
+        
+        if cached_data:
+            return Response(cached_data, status=status.HTTP_200_OK)
+
         queryset = self.filter_queryset(self.get_queryset())
         serializer = WorkoutPlanSerializer(queryset, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
-    
+        cache.set(cache_key, serializer.data, timeout=60*5)
+        return Response(serializer.data, status=status.HTTP_200_OK)    
     
     # Invalidating cache during creation, update and deletion
     def perform_create(self, serializer):
         plan = serializer.save(user=self.request.user)
-        cache.delete(f'completed_workouts_{self.request.user.id}')
         cache.delete(f'workout_data_{self.request.user.id}')
         return plan
         
@@ -86,7 +90,7 @@ class WorkoutPlanViewSet(viewsets.ModelViewSet):
         
         workout.completed = True
         workout.save()
-        cache.delete(f'completed_workout_{request.user.id}')
+        cache.delete(f'completed_workouts_{request.user.id}')
         return Response({'status': 'Workout marked as completed'})
 
     # endpoint to get completed workouts
@@ -109,33 +113,49 @@ class ExerciseViewSet(CreateModelMixin, ListModelMixin, RetrieveModelMixin, Gene
     serializer_class = ExerciseSerializer
     permission_classes = [IsAuthenticated]
     
-    # Implementing caching
+    # Implementing caching with timeout set for 10 minutes for getting all the existing exercises.
     def get_queryset(self):
-        cache_key = 'exercise_data'
-        exercise_id = cache.get(cache_key)
-        
-        if exercise_id is None:
-            queryset = Exercise.objects.all()
-            exercise_ids = list(queryset.values_list("id", flat=True))
-            cache.set(cache_key, exercise_ids, timeout=60*10)
-        else:
-            queryset = Exercise.objects.filter(id__in=exercise_ids)
-            
-        return queryset
+        return Exercise.objects.all()
     
-    # Implementing rate limiting/throttling
+    def get_throttles(self):
+        if self.action == 'list':
+            return [GetWorkoutsThrottle()]
+        return super().get_throttles()
+            
+    # Implementing caching
     def list(self, request, *args, **kwargs):
-        self.throttle_classes = [GetWorkoutsThrottle]
-        queryset = self.filter_queryset(self.get_queryset())
-        serializer = self.get_serializer(queryset, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
-    
+        cache_key = 'exercise_data'
+        if cache.get(cache_key) is None:
+            queryset = self.filter_queryset(self.get_queryset())
+            serializer = self.get_serializer(queryset, many=True)
+            data = serializer.data
+            cache.set(cache_key, data, timeout=60*10)
+        else:
+            data = cache.get(cache_key)
             
+        return Response(data, status=status.HTTP_200_OK)
+    
+    def retrieve(self, request, *args, **kwargs):
+        pk = kwargs['pk']
+        cache_key = f'exercise:{pk}'
+        data = cache.get(cache_key)
+        
+        if data is None:
+            instance = self.get_object()
+            serializer = self.get_serializer(instance)
+            data = serializer.data
+            cache.set(cache_key, data, timeout=60*5)
+
+        return Response(data, status=status.HTTP_200_OK)
+    
+    # Allowed creation of multiple exercises at a time, and invalidated exercise cache         
     def create(self, request, *args, **kwargs):
         many = isinstance(request.data, list)
         serializer = self.get_serializer(data=request.data, many=many)
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
+        cache.delete('exercise_data')
+            
         headers = self.get_success_headers(serializer.data)
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
